@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Python Camp</title>
+<link rel="stylesheet" href="/css/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐍</text></svg>">
+</head>
+<body>
+
+<div class="welcome-wrap">
+
+  <div class="center">
+    <div class="logo">🐍</div>
+    <h1>Python Camp</h1>
+    <p class="muted">Five days. Five levels. One brand new superpower.</p>
+  </div>
+
+  <div class="card" style="margin-top:26px">
+    <h2>Who are you?</h2>
+    <p class="muted small">Tap your name to carry on where you left off.</p>
+    <div id="students" class="student-grid"></div>
+    <p id="nobody" class="muted hidden">Nobody has joined yet — be the first!</p>
+  </div>
+
+  <div class="card" style="margin-top:18px">
+    <h2>New here? Join the camp</h2>
+    <p class="small muted">Pick a character:</p>
+    <div id="avatars" class="avatar-picker"></div>
+    <div class="row wrap">
+      <input type="text" id="name" placeholder="Your first name" maxlength="24" autocomplete="off">
+      <button id="join">Start learning →</button>
+    </div>
+    <p id="joinErr" class="small hidden" style="color:var(--bad)"></p>
+  </div>
+
+  <p class="center small muted" style="margin-top:26px">
+    Teacher? <a href="/teacher">Open the dashboard</a>
+  </p>
+</div>
+
+<div id="toasts"></div>
+
+<script type="module">
+const AVATARS = ['🐍','🦊','🐼','🐸','🦄','🐙','🦖','🐧','🐢','🦉','🐝','🦁','🐳','🐨','👾','🚀'];
+let chosen = AVATARS[0];
+
+const avatarBox = document.getElementById('avatars');
+AVATARS.forEach((emoji, i) => {
+  const b = document.createElement('button');
+  b.className = 'avatar-opt' + (i === 0 ? ' on' : '');
+  b.type = 'button';
+  b.textContent = emoji;
+  b.onclick = () => {
+    chosen = emoji;
+    [...avatarBox.children].forEach((c) => c.classList.remove('on'));
+    b.classList.add('on');
+  };
+  avatarBox.appendChild(b);
+});
+
+async function loadStudents() {
+  const list = await (await fetch('/api/students')).json();
+  const box = document.getElementById('students');
+  box.innerHTML = '';
+  document.getElementById('nobody').classList.toggle('hidden', list.length > 0);
+  for (const s of list) {
+    const chip = document.createElement('div');
+    chip.className = 'student-chip';
+    chip.innerHTML = `<div class="face">${s.avatar}</div><div class="who"></div>`;
+    chip.querySelector('.who').textContent = s.name;
+    chip.onclick = () => enter(s);
+    box.appendChild(chip);
+  }
+}
+
+function enter(student) {
+  localStorage.setItem('camp.student', JSON.stringify(student));
+  location.href = '/play';
+}
+
+const nameInput = document.getElementById('name');
+const errBox = document.getElementById('joinErr');
+
+async function join() {
+  const name = nameInput.value.trim();
+  if (!name) {
+    errBox.textContent = 'Type your first name first!';
+    errBox.classList.remove('hidden');
+    return;
+  }
+  const res = await fetch('/api/students', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, avatar: chosen })
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    errBox.textContent = data.error || 'Something went wrong.';
+    errBox.classList.remove('hidden');
+    return;
+  }
+  enter(data);
+}
+
+document.getElementById('join').onclick = join;
+nameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') join(); });
+
+loadStudents();
+</script>
+</body>
+</html>

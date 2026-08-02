@@ -1,0 +1,16 @@
+# Student progress database — real kids' names and work. Never commit this.
+data/
+*.db
+*.db-wal
+*.db-shm
+
+# Node
+node_modules/
+npm-debug.log*
+
+# OS / editor noise
+Thumbs.db
+Desktop.ini
+.DS_Store
+.vscode/
+.idea/

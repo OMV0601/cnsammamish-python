@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Python Camp</title>
+<link rel="stylesheet" href="/css/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐍</text></svg>">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="me">
+    <span class="face" id="meFace">🐍</span>
+    <span id="meName">…</span>
+  </div>
+  <div class="rank" id="meRank">🥚 Egg</div>
+  <div class="xpbar"><i id="xpFill"></i></div>
+  <div class="small muted" id="xpText">0 XP</div>
+  <div class="spacer"></div>
+  <span class="small muted" id="pyStatus">Python: waking up…</span>
+  <button class="small ghost" id="helpBtn">🙋 I need help</button>
+  <button class="small ghost" id="switchBtn">Switch user</button>
+</header>
+
+<main class="layout">
+  <aside class="sidebar">
+    <div id="dayList"></div>
+    <div class="card" style="padding:14px;margin-top:6px">
+      <div class="small muted" style="margin-bottom:6px">Your badges</div>
+      <div class="badge-row" id="badges"></div>
+    </div>
+    <button class="small ghost" id="certBtn" style="width:100%;margin-top:10px">🏅 My certificate</button>
+  </aside>
+
+  <section>
+    <div id="taskNav" class="card" style="padding:12px 14px;margin-bottom:16px"></div>
+    <div id="pane" class="card"></div>
+  </section>
+</main>
+
+<div id="toasts"></div>
+<div id="celebrate"></div>
+
+<script type="module" src="/js/app.js"></script>
+</body>
+</html>

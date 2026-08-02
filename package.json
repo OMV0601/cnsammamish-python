@@ -1,0 +1,14 @@
+{
+  "name": "python-camp",
+  "version": "1.0.0",
+  "description": "5-day gamified Python camp for kids (~age 10). Zero dependencies.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning server.js",
+    "reset-db": "node -e \"import('node:fs').then(fs=>{fs.rmSync('data/camp.db',{force:true});console.log('database cleared')})\""
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  }
+}

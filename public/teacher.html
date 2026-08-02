@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Python Camp — Teacher</title>
+<link rel="stylesheet" href="/css/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📋</text></svg>">
+</head>
+<body>
+
+<div class="t-wrap">
+
+  <div id="gate" class="card" style="max-width:440px;margin:60px auto">
+    <h2>📋 Teacher dashboard</h2>
+    <p class="small muted">Enter the passcode shown in the terminal window.</p>
+    <div class="row">
+      <input type="password" id="pass" placeholder="Passcode" autocomplete="off">
+      <button id="go">Open</button>
+    </div>
+    <p id="gateErr" class="small hidden" style="color:var(--bad)"></p>
+  </div>
+
+  <div id="board" class="hidden">
+    <div class="row wrap" style="margin-bottom:14px">
+      <h1 style="margin:0">📋 Camp dashboard</h1>
+      <div class="spacer"></div>
+      <span class="small muted" id="clock"></span>
+      <button class="small ghost" id="refresh">Refresh now</button>
+    </div>
+
+    <div id="alerts"></div>
+
+    <div class="card" style="margin-bottom:18px">
+      <h3>Where everyone is</h3>
+      <div style="overflow-x:auto">
+        <table class="grid" id="table"></table>
+      </div>
+      <p class="small muted" style="margin-top:10px">
+        A green dot means they did something in the last 5 minutes. Click a name for their work.
+      </p>
+    </div>
+
+    <div class="row wrap" style="align-items:flex-start;gap:18px">
+      <div class="card" style="flex:1;min-width:300px">
+        <h3>Live activity</h3>
+        <div class="feed" id="feed"></div>
+      </div>
+      <div class="card" style="flex:1;min-width:300px">
+        <h3 id="detailTitle">Pick a student</h3>
+        <div id="detail" class="small muted">Click a name in the table to see their code and where they got stuck.</div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:18px">
+      <h3>Camp plan at a glance</h3>
+      <div id="plan"></div>
+    </div>
+  </div>
+</div>
+
+<div id="toasts"></div>
+<script type="module" src="/js/teacher.js"></script>
+</body>
+</html>
