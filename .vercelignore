@@ -1,0 +1,13 @@
+# Vercel hosts the static demo only — the contents of public/.
+#
+# Everything below is the local camp server. If Vercel can see it, it detects
+# a Node app and builds server.js into a serverless function, which then
+# crashes on import because db.js writes a SQLite file to a read-only disk.
+# Hiding these files leaves an unambiguous static site.
+
+server.js
+db.js
+package.json
+package-lock.json
+START CAMP.bat
+data/
