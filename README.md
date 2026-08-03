@@ -44,6 +44,20 @@ To change the teacher passcode: set `TEACHER_PASSCODE` before starting.
 
 ---
 
+## ⚠️ Do not deploy this to Vercel / Netlify / Cloudflare Pages
+
+This is a **local-first app, on purpose**. It will crash on serverless hosting, and it is not worth "fixing":
+
+- `db.js` creates and writes a **SQLite file on disk**. Serverless filesystems are read-only apart from `/tmp`, so the function dies on the first request with `FUNCTION_INVOCATION_FAILED`.
+- Even pointed at `/tmp`, serverless instances are **stateless and disposable**. Kids would land on different instances and instances get recycled mid-session, so **progress would randomly disappear** — the exact thing this app exists to prevent.
+- `server.js` is a long-running server that holds a port. Serverless platforms want a per-request handler instead.
+
+Hosting buys nothing here: everyone is in one room on one wifi network, and running locally means the camp still works if the venue's internet drops. If you ever genuinely need it reachable from home, the storage has to move to a hosted database (Turso, Neon) — that's a real rewrite of `db.js`, not a config change.
+
+The Python execution is client-side (Pyodide), so it is unaffected either way.
+
+---
+
 ## What the kids see
 
 1. **Pick a character and type their first name** — that's the whole login.
