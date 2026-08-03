@@ -281,4 +281,21 @@ $('#go').onclick = () => open($('#pass').value.trim());
 $('#pass').addEventListener('keydown', (e) => { if (e.key === 'Enter') open($('#pass').value.trim()); });
 $('#refresh').onclick = refresh;
 
-if (passcode) open(passcode);
+// The dashboard needs the local server. On the static demo, say so plainly
+// rather than showing a passcode box that can never work.
+(async () => {
+  try {
+    const res = await fetch('/api/curriculum', { cache: 'no-store' });
+    if (!res.ok) throw new Error('no server');
+  } catch {
+    $('#gate').innerHTML = `
+      <h2>📋 Teacher dashboard</h2>
+      <p>The dashboard tracks every student in one place, so it needs the camp server running.
+         It is not part of the online demo.</p>
+      <p class="small muted">Run <code>START CAMP.bat</code> on the instructor laptop, then open
+         <code>/teacher</code> from the address it prints.</p>
+      <p><a href="/">← Back to the lessons</a></p>`;
+    return;
+  }
+  if (passcode) open(passcode);
+})();

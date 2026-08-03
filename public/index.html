@@ -35,7 +35,7 @@
     <p id="joinErr" class="small hidden" style="color:var(--bad)"></p>
   </div>
 
-  <p class="center small muted" style="margin-top:26px">
+  <p class="center small muted" style="margin-top:26px" id="teacherLine">
     Teacher? <a href="/teacher">Open the dashboard</a>
   </p>
 </div>
@@ -43,6 +43,21 @@
 <div id="toasts"></div>
 
 <script type="module">
+import * as store from '/js/store.js';
+
+await store.initStore();
+
+if (store.mode === 'demo') {
+  const note = document.createElement('div');
+  note.className = 'callout warn';
+  note.style.margin = '20px 0 0';
+  note.innerHTML = "<b>This is the online demo.</b> Everything works — all five days, the quizzes, " +
+    "and real Python running in your browser — but your progress is saved <b>only in this browser</b> " +
+    "on this device. The real camp runs on the instructor's laptop, where progress is shared and saved properly.";
+  document.querySelector('.welcome-wrap > .center').after(note);
+  document.getElementById('teacherLine').classList.add('hidden');
+}
+
 const AVATARS = ['🐍','🦊','🐼','🐸','🦄','🐙','🦖','🐧','🐢','🦉','🐝','🦁','🐳','🐨','👾','🚀'];
 let chosen = AVATARS[0];
 
@@ -61,7 +76,7 @@ AVATARS.forEach((emoji, i) => {
 });
 
 async function loadStudents() {
-  const list = await (await fetch('/api/students')).json();
+  const list = await store.listStudents();
   const box = document.getElementById('students');
   box.innerHTML = '';
   document.getElementById('nobody').classList.toggle('hidden', list.length > 0);
@@ -77,7 +92,9 @@ async function loadStudents() {
 
 function enter(student) {
   localStorage.setItem('camp.student', JSON.stringify(student));
-  location.href = '/play';
+  // /play is a friendly alias the camp server provides; a plain static host
+  // may not, so go straight to the file when there is no server.
+  location.href = store.mode === 'demo' ? '/app.html' : '/play';
 }
 
 const nameInput = document.getElementById('name');
@@ -90,18 +107,12 @@ async function join() {
     errBox.classList.remove('hidden');
     return;
   }
-  const res = await fetch('/api/students', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, avatar: chosen })
-  });
-  const data = await res.json();
-  if (!res.ok) {
-    errBox.textContent = data.error || 'Something went wrong.';
+  try {
+    enter(await store.createStudent(name, chosen));
+  } catch (err) {
+    errBox.textContent = err.message || 'Something went wrong.';
     errBox.classList.remove('hidden');
-    return;
   }
-  enter(data);
 }
 
 document.getElementById('join').onclick = join;

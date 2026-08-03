@@ -11,7 +11,8 @@ import { dirname } from 'node:path';
 import { networkInterfaces } from 'node:os';
 
 import * as store from './db.js';
-import { curriculum } from './curriculum/index.js';
+// Lives under public/ so the static demo build can import it in the browser too.
+import { curriculum } from './public/curriculum/index.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const PUBLIC = join(here, 'public');

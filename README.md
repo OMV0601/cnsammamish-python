@@ -44,17 +44,29 @@ To change the teacher passcode: set `TEACHER_PASSCODE` before starting.
 
 ---
 
-## ⚠️ Do not deploy this to Vercel / Netlify / Cloudflare Pages
+## Two modes: camp mode and demo mode
 
-This is a **local-first app, on purpose**. It will crash on serverless hosting, and it is not worth "fixing":
+The same codebase runs two ways, and it works out which one it is in automatically at startup ([public/js/store.js](public/js/store.js)).
 
-- `db.js` creates and writes a **SQLite file on disk**. Serverless filesystems are read-only apart from `/tmp`, so the function dies on the first request with `FUNCTION_INVOCATION_FAILED`.
-- Even pointed at `/tmp`, serverless instances are **stateless and disposable**. Kids would land on different instances and instances get recycled mid-session, so **progress would randomly disappear** — the exact thing this app exists to prevent.
-- `server.js` is a long-running server that holds a port. Serverless platforms want a per-request handler instead.
+| | **Camp mode** (run the server) | **Demo mode** (deployed static) |
+|---|---|---|
+| How | `START CAMP.bat` | Vercel / Netlify / any static host |
+| Lessons, quizzes, real Python | ✅ | ✅ |
+| Progress saved | SQLite, shared across devices | This browser only (`localStorage`) |
+| Teacher dashboard | ✅ | ❌ shows an explanatory page |
+| Help button | ✅ | hidden |
 
-Hosting buys nothing here: everyone is in one room on one wifi network, and running locally means the camp still works if the venue's internet drops. If you ever genuinely need it reachable from home, the storage has to move to a hosted database (Turso, Neon) — that's a real rewrite of `db.js`, not a config change.
+**Use camp mode for the actual camp.** Demo mode exists for sharing a link — showing a colleague or a parent what the kids are doing.
 
-The Python execution is client-side (Pyodide), so it is unaffected either way.
+### Deploying the demo
+
+Point Vercel at this repo. [vercel.json](vercel.json) already sets the output directory to `public`, so it deploys as a **static site with no serverless functions** and nothing to crash. Push to `main` and it redeploys.
+
+### Why the full app can't go serverless
+
+`db.js` writes a SQLite file to disk. Serverless filesystems are read-only outside `/tmp`, so the function dies instantly (`FUNCTION_INVOCATION_FAILED`). Even redirected to `/tmp`, serverless instances are stateless and disposable — kids would hit different instances and progress would randomly disappear, which is the one thing this app exists to prevent. Making the real app hostable means moving storage to a hosted database (Turso, Neon), a genuine rewrite of `db.js`, not a config change.
+
+Python execution is client-side (Pyodide), so it is identical in both modes.
 
 ---
 

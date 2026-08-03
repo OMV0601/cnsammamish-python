@@ -1,5 +1,6 @@
 /* Python Camp — the learner app. */
 import { startPython, onRunnerStatus, runPython, friendlyError, checkTask } from './runner.js';
+import * as store from './store.js';
 
 /* ------------------------------------------------------------------ state */
 
@@ -19,19 +20,10 @@ const el = (tag, cls, html) => {
   return n;
 };
 
-/* -------------------------------------------------------------------- api */
-
-async function api(path, body) {
-  const opts = body
-    ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
-    : {};
-  const res = await fetch(path, opts);
-  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Request failed');
-  return res.json();
-}
+/* ------------------------------------------------------------------ store */
 
 const logEvent = (kind, task, detail) =>
-  api('/api/events', {
+  store.logEvent({
     studentId: student.id,
     taskKey: task ? task.key : null,
     day: task ? task.day : null,
@@ -40,7 +32,7 @@ const logEvent = (kind, task, detail) =>
   }).catch(() => {});
 
 async function saveTask(task, { done = false, code, attemptDelta = 0 } = {}) {
-  const row = await api('/api/progress', {
+  const row = await store.saveProgress({
     studentId: student.id,
     taskKey: task.key,
     day: task.day,
@@ -619,7 +611,7 @@ $('#helpBtn').onclick = async () => {
   helpOn = !helpOn;
   const day = curriculum.days[view.day - 1];
   const task = day.tasks[view.taskIndex];
-  await api('/api/help', { studentId: student.id, taskKey: task?.key, day: view.day, on: helpOn });
+  await store.setHelp({ studentId: student.id, taskKey: task?.key, day: view.day, on: helpOn });
   $('#helpBtn').textContent = helpOn ? '🙋 Help is coming — tap to cancel' : '🙋 I need help';
   $('#helpBtn').classList.toggle('danger', helpOn);
   $('#helpBtn').classList.toggle('ghost', !helpOn);
@@ -638,10 +630,23 @@ onRunnerStatus((state, detail) => {
 /* ------------------------------------------------------------------ boot */
 
 (async function boot() {
-  curriculum = await api('/api/curriculum');
-  const data = await api(`/api/students/${student.id}/progress`);
+  await store.initStore();
+  curriculum = store.getCurriculum();
+
+  const data = await store.getStudentProgress(student.id);
+  if (!data.student) {
+    // Demo progress was cleared, or this student belongs to another browser.
+    localStorage.removeItem('camp.student');
+    location.href = '/';
+    return;
+  }
   progress = new Map(data.progress.map((row) => [row.task_key, row]));
   helpOn = data.help;
+
+  if (store.mode === 'demo') {
+    $('#helpBtn').classList.add('hidden');
+    document.title = 'Python Camp (demo)';
+  }
   if (helpOn) {
     $('#helpBtn').textContent = '🙋 Help is coming — tap to cancel';
     $('#helpBtn').classList.add('danger');
