@@ -21,12 +21,14 @@ db.exec(`
     id         INTEGER PRIMARY KEY AUTOINCREMENT,
     name       TEXT NOT NULL UNIQUE,
     avatar     TEXT NOT NULL DEFAULT '🐍',
+    course     TEXT NOT NULL DEFAULT 'level1',
     created_at TEXT NOT NULL
   );
 
   CREATE TABLE IF NOT EXISTS progress (
     student_id  INTEGER NOT NULL,
     task_key    TEXT    NOT NULL,
+    course      TEXT    NOT NULL DEFAULT 'camp',
     day         INTEGER NOT NULL,
     done        INTEGER NOT NULL DEFAULT 0,
     attempts    INTEGER NOT NULL DEFAULT 0,
@@ -56,6 +58,18 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_events_student ON events(student_id, created_at);
 `);
 
+/* Databases created before courses existed are missing these columns. Adding
+   them here means an in-progress camp keeps working after an update; the
+   default of 'camp' is correct because that is all those rows can be. */
+function ensureColumn(table, column, declaration) {
+  const columns = db.prepare(`PRAGMA table_info(${table})`).all();
+  if (!columns.some((c) => c.name === column)) {
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${declaration}`);
+  }
+}
+ensureColumn('students', 'course', "TEXT NOT NULL DEFAULT 'camp'");
+ensureColumn('progress', 'course', "TEXT NOT NULL DEFAULT 'camp'");
+
 const now = () => new Date().toISOString();
 
 /* ---------------------------------------------------------------- students */
@@ -64,18 +78,27 @@ export function listStudents() {
   return db.prepare(`SELECT * FROM students ORDER BY name COLLATE NOCASE`).all();
 }
 
-export function createStudent(name, avatar) {
+export function createStudent(name, avatar, course) {
   const clean = String(name || '').trim().slice(0, 24);
   if (!clean) throw new Error('A name is required');
 
   const existing = db
     .prepare(`SELECT * FROM students WHERE name = ? COLLATE NOCASE`)
     .get(clean);
-  if (existing) return existing;
+  if (existing) {
+    // Returning students may be joining a different course this term.
+    if (course && course !== existing.course) return setStudentCourse(existing.id, course);
+    return existing;
+  }
 
-  db.prepare(`INSERT INTO students (name, avatar, created_at) VALUES (?, ?, ?)`)
-    .run(clean, avatar || '🐍', now());
+  db.prepare(`INSERT INTO students (name, avatar, course, created_at) VALUES (?, ?, ?, ?)`)
+    .run(clean, avatar || '🐍', course || 'level1', now());
   return db.prepare(`SELECT * FROM students WHERE name = ? COLLATE NOCASE`).get(clean);
+}
+
+export function setStudentCourse(id, course) {
+  db.prepare(`UPDATE students SET course = ? WHERE id = ?`).run(String(course), Number(id));
+  return getStudent(id);
 }
 
 export function getStudent(id) {
@@ -104,15 +127,15 @@ export function getProgress(studentId) {
     .all(Number(studentId));
 }
 
-export function saveProgress({ studentId, taskKey, day, done, xp, code, attemptDelta }) {
+export function saveProgress({ studentId, taskKey, course, day, done, xp, code, attemptDelta }) {
   const sid = Number(studentId);
   const stamp = now();
 
   db.prepare(
-    `INSERT INTO progress (student_id, task_key, day, done, attempts, xp, last_code, started_at)
-     VALUES (?, ?, ?, 0, 0, 0, NULL, ?)
+    `INSERT INTO progress (student_id, task_key, course, day, done, attempts, xp, last_code, started_at)
+     VALUES (?, ?, ?, ?, 0, 0, 0, NULL, ?)
      ON CONFLICT(student_id, task_key) DO NOTHING`
-  ).run(sid, taskKey, Number(day), stamp);
+  ).run(sid, taskKey, course || 'camp', Number(day), stamp);
 
   const row = db
     .prepare(`SELECT * FROM progress WHERE student_id = ? AND task_key = ?`)

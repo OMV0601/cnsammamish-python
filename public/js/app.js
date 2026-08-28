@@ -8,6 +8,7 @@ const student = JSON.parse(localStorage.getItem('camp.student') || 'null');
 if (!student) location.href = '/';
 
 let curriculum = null;
+const UNIT = () => curriculum.unitWord || 'Day';
 let progress = new Map();   // taskKey -> row
 let helpOn = false;
 let view = { day: 1, taskIndex: 0, mode: 'task' };
@@ -35,6 +36,7 @@ async function saveTask(task, { done = false, code, attemptDelta = 0 } = {}) {
   const row = await store.saveProgress({
     studentId: student.id,
     taskKey: task.key,
+    course: curriculum.id,
     day: task.day,
     done,
     xp: task.xp,
@@ -110,7 +112,7 @@ function paintHeader() {
     const earned = dayStats(day).pct === 100;
     const b = el('div', 'badge' + (earned ? ' earned' : ''),
       `<span class="ico">${day.badge}</span>${day.badgeName}`);
-    b.title = earned ? `Earned: ${day.badgeName}` : `Finish Day ${day.day} to earn this`;
+    b.title = earned ? `Earned: ${day.badgeName}` : `Finish ${UNIT()} ${day.day} to earn this`;
     badges.appendChild(b);
   }
 }
@@ -126,12 +128,12 @@ function paintDays() {
     const card = el('div', 'day-card' + (unlocked ? '' : ' locked') + (day.day === view.day ? ' current' : ''));
     card.innerHTML = `
       <div class="dtitle"><span style="font-size:1.3rem">${unlocked ? day.emoji : '🔒'}</span>
-        <span>Day ${day.day}: ${day.title}</span></div>
+        <span>${UNIT()} ${day.day}: ${day.title}</span></div>
       <div class="dsub">${day.subtitle} · ${stats.done}/${stats.total} done</div>
       <div class="minibar"><i style="width:${stats.pct}%;background:${day.color}"></i></div>`;
     card.onclick = () => {
       if (!unlocked && !confirm(
-        `You have not finished Day ${day.day - 1} yet.\n\nDay ${day.day} builds on it, so things may not make sense.\nOpen it anyway?`
+        `You have not finished ${UNIT()} ${day.day - 1} yet.\n\n${UNIT()} ${day.day} builds on it, so things may not make sense.\nOpen it anyway?`
       )) return;
       view = { day: day.day, taskIndex: 0, mode: 'task' };
       render();
@@ -142,12 +144,13 @@ function paintDays() {
 
 /* -------------------------------------------------------- task nav strip */
 
-const KIND_LABEL = { lesson: 'Learn', blanks: 'Fill the blanks', quiz: 'Quiz', code: 'Code it', project: 'Mini project' };
+const KIND_LABEL = { lesson: 'Learn', blanks: 'Fill the blanks', quiz: 'Quiz', code: 'Code it',
+  project: 'Mini project', debug: 'Bug hunt', mission: 'Mission' };
 
 function paintTaskNav() {
   const day = curriculum.days[view.day - 1];
   const box = $('#taskNav');
-  box.innerHTML = `<div class="small muted" style="margin-bottom:4px">Day ${day.day} · ${day.title}</div>`;
+  box.innerHTML = `<div class="small muted" style="margin-bottom:4px">${UNIT()} ${day.day} · ${day.title}</div>`;
   const list = el('div', 'task-list');
   day.tasks.forEach((task, i) => {
     const item = el('div', 'task-item' + (isDone(task.key) ? ' done' : '') + (i === view.taskIndex && view.mode === 'task' ? ' on' : ''));
@@ -158,6 +161,91 @@ function paintTaskNav() {
     list.appendChild(item);
   });
   box.appendChild(list);
+}
+
+
+/* ------------------------------------------------------------ turtle art */
+
+/* Paints the drawing recorded by the Python turtle. The view auto-fits so a
+   tiny square and a huge spiral both fill the box sensibly. */
+function drawTurtle(canvas, drawing) {
+  if (!drawing || !drawing.ops.length) { canvas.classList.add('hidden'); return; }
+  canvas.classList.remove('hidden');
+
+  const dpr = window.devicePixelRatio || 1;
+  const cssW = canvas.clientWidth || 460;
+  const cssH = 340;
+  canvas.width = cssW * dpr;
+  canvas.height = cssH * dpr;
+  canvas.style.height = cssH + 'px';
+
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.fillStyle = drawing.bg || 'white';
+  ctx.fillRect(0, 0, cssW, cssH);
+
+  // Work out how much room the drawing needs.
+  let minX = 0, maxX = 0, minY = 0, maxY = 0;
+  const see = (x, y) => {
+    if (x < minX) minX = x; if (x > maxX) maxX = x;
+    if (y < minY) minY = y; if (y > maxY) maxY = y;
+  };
+  for (const o of drawing.ops) {
+    if (o.op === 'line') { see(o.x1, o.y1); see(o.x2, o.y2); }
+    else if (o.op === 'fill') { for (const pt of o.points) see(pt[0], pt[1]); }
+    else if (o.x !== undefined) see(o.x, o.y);
+  }
+  const pad = 24;
+  const spanX = Math.max(maxX - minX, 120);
+  const spanY = Math.max(maxY - minY, 120);
+  const scale = Math.min((cssW - pad * 2) / spanX, (cssH - pad * 2) / spanY);
+  const midX = (minX + maxX) / 2;
+  const midY = (minY + maxY) / 2;
+  // Turtle y points up; canvas y points down, so the y term is negated.
+  const tx = (x) => cssW / 2 + (x - midX) * scale;
+  const ty = (y) => cssH / 2 - (y - midY) * scale;
+
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  for (const o of drawing.ops) {
+    if (o.op === 'line') {
+      ctx.strokeStyle = o.color;
+      ctx.lineWidth = Math.max(1, o.width * scale * 0.9);
+      ctx.beginPath();
+      ctx.moveTo(tx(o.x1), ty(o.y1));
+      ctx.lineTo(tx(o.x2), ty(o.y2));
+      ctx.stroke();
+    } else if (o.op === 'fill') {
+      ctx.fillStyle = o.color;
+      ctx.beginPath();
+      ctx.moveTo(tx(o.points[0][0]), ty(o.points[0][1]));
+      for (const pt of o.points.slice(1)) ctx.lineTo(tx(pt[0]), ty(pt[1]));
+      ctx.closePath();
+      ctx.fill();
+    } else if (o.op === 'dot') {
+      ctx.fillStyle = o.color;
+      ctx.beginPath();
+      ctx.arc(tx(o.x), ty(o.y), Math.max(2, (o.size * scale) / 2), 0, Math.PI * 2);
+      ctx.fill();
+    } else if (o.op === 'stamp') {
+      ctx.fillStyle = o.color;
+      ctx.beginPath();
+      ctx.arc(tx(o.x), ty(o.y), 5, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (o.op === 'text') {
+      ctx.fillStyle = o.color;
+      ctx.font = `${Math.max(10, o.size)}px system-ui, sans-serif`;
+      ctx.textAlign = o.align === 'center' ? 'center' : o.align === 'right' ? 'right' : 'left';
+      ctx.fillText(o.text, tx(o.x), ty(o.y));
+    }
+  }
+
+  if (drawing.overflow) {
+    ctx.fillStyle = '#b23c17';
+    ctx.font = '12px system-ui, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('Drawing got very big - showing the first part only.', 10, cssH - 10);
+  }
 }
 
 /* ------------------------------------------------------------ code editor */
@@ -194,20 +282,27 @@ function makeEditor(initial, { minHeight } = {}) {
 
   const out = el('pre', 'output');
   out.innerHTML = '<span class="sys">Output will appear here when you press Run.</span>';
-  shell.append(area, out);
-  return { shell, area, out };
+  const canvas = el('canvas', 'turtle-canvas hidden');
+  shell.append(area, out, canvas);
+  return { shell, area, out, canvas };
 }
 
-async function runInto(area, out, stdin, button) {
+async function runInto(ed, stdin, button) {
+  const { area, out } = ed;
   out.innerHTML = '<span class="sys">Running…</span>';
   if (button) button.disabled = true;
   const result = await runPython(area.value, stdin || []);
   if (button) button.disabled = false;
+  if (ed.canvas) drawTurtle(ed.canvas, result.turtle);
 
   const parts = [];
   if (result.stdout) parts.push(escapeHtml(result.stdout.replace(/\n$/, '')));
   if (result.error) parts.push(`<span class="err">${escapeHtml(friendlyError(result.error))}</span>`);
-  if (!parts.length) parts.push('<span class="sys">(your program finished without printing anything)</span>');
+  if (!parts.length) {
+    parts.push(result.turtle
+      ? '<span class="sys">(your drawing is below)</span>'
+      : '<span class="sys">(your program finished without printing anything)</span>');
+  }
   out.innerHTML = parts.join('\n');
   return result;
 }
@@ -239,7 +334,7 @@ function renderLesson(task, pane) {
         const runBtn = el('button', 'go', '▶ Run');
         bar.appendChild(runBtn);
         if (block.note) bar.appendChild(el('span', 'small muted', block.note));
-        runBtn.onclick = () => runInto(ed.area, ed.out, block.stdin, runBtn);
+        runBtn.onclick = () => runInto(ed, block.stdin, runBtn);
         wrap.append(ed.shell, bar);
         body.appendChild(wrap);
       }
@@ -405,6 +500,11 @@ function renderQuiz(task, pane) {
 /* --------------------------------------------------------- code / project */
 
 function renderCode(task, pane) {
+  if (task.type === 'debug') {
+    pane.appendChild(el('div', 'callout warn',
+      '🐛 <b>This program has exactly one bug.</b> Run it first and read the red message. ' +
+      'Use the hints in order — they get more specific each time.'));
+  }
   pane.appendChild(el('div', 'lesson-body', task.brief));
 
   if (task.checklist) {
@@ -450,7 +550,7 @@ function renderCode(task, pane) {
     if (confirm('Throw away your code and start from the beginning?')) ed.area.value = task.starter || '';
   };
 
-  runBtn.onclick = () => runInto(ed.area, ed.out, task.stdin, runBtn);
+  runBtn.onclick = () => runInto(ed, task.stdin, runBtn);
 
   checkBtn.onclick = async () => {
     checkBtn.disabled = true;
@@ -478,6 +578,17 @@ function renderCode(task, pane) {
       } else {
         await saveTask(task, { done: true, code: ed.area.value });
       }
+      if (task.understand) {
+        verdict.appendChild(el('div', 'callout tip',
+          '🧠 <b>Show your teacher you understand:</b> ' + task.understand));
+      }
+      if (task.quickCheck) {
+        verdict.appendChild(el('div', 'callout tip', '🔍 <b>Quick check:</b> ' + task.quickCheck));
+      }
+      if (task.extra) {
+        verdict.appendChild(el('div', 'callout',
+          `⭐ <b>${task.extra.label || 'Extra Challenge'}:</b> ${task.extra.brief}`));
+      }
       const next = el('button', 'go', 'Next →');
       next.style.marginTop = '12px';
       next.onclick = nextTask;
@@ -499,6 +610,62 @@ function renderCode(task, pane) {
       }
     }
   };
+}
+
+
+/* ---------------------------------------------------------- missions ---- */
+
+/* A mission carries two ways to finish it: the Main Mission, and a Simpler
+   Version that teaches the same skill with less to build. Either one counts
+   as done — the curriculum treats the Simpler Version as a real finish, not
+   as a failure. The Extra Challenge appears once the mission passes. */
+function renderMission(task, pane) {
+  const tierKey = 'camp.tier.' + task.key;
+  let tier = localStorage.getItem(tierKey) || 'main';
+  if (tier === 'simpler' && !task.simpler) tier = 'main';
+
+  const picker = el('div', 'tier-picker');
+  const body = el('div');
+  pane.append(picker, body);
+
+  function paint() {
+    picker.innerHTML = '';
+    const options = [{ id: 'main', label: '🎯 Main Mission' }];
+    if (task.simpler) options.push({ id: 'simpler', label: '🌱 ' + (task.simpler.label || 'Simpler Version') });
+    for (const opt of options) {
+      const b = el('button', 'tier' + (opt.id === tier ? ' on' : ''), opt.label);
+      b.onclick = () => {
+        if (tier === opt.id) return;
+        tier = opt.id;
+        try { localStorage.setItem(tierKey, tier); } catch { /* private mode */ }
+        logEvent('tier', task, tier);
+        paint();
+      };
+      picker.appendChild(b);
+    }
+    if (task.simpler) {
+      picker.appendChild(el('span', 'small muted',
+        tier === 'main'
+          ? 'Stuck? The Simpler Version still counts as finished.'
+          : 'This counts as finished. Try the Main Mission any time.'));
+    }
+
+    // Flatten the chosen tier onto the task so renderCode sees a normal task.
+    const spec = tier === 'simpler' ? task.simpler : task.main;
+    const effective = {
+      ...task,
+      ...spec,
+      type: 'mission',
+      key: task.key,
+      xp: task.xp,
+      title: task.title,
+      extra: tier === 'main' ? task.extra : null,
+      quickCheck: tier === 'main' ? task.quickCheck : null
+    };
+    body.innerHTML = '';
+    renderCode(effective, body);
+  }
+  paint();
 }
 
 /* ---------------------------------------------------------- certificate */
@@ -543,7 +710,7 @@ function nextTask() {
     view.taskIndex++;
   } else if (view.day < curriculum.days.length) {
     const stats = dayStats(day);
-    if (stats.pct === 100) { confetti(); toast(`Day ${day.day} complete — badge unlocked! ${day.badge}`, true); }
+    if (stats.pct === 100) { confetti(); toast(`${UNIT()} ${day.day} complete — badge unlocked! ${day.badge}`, true); }
     view = { day: view.day + 1, taskIndex: 0, mode: 'task' };
   } else {
     view.mode = 'cert';
@@ -574,7 +741,7 @@ function render() {
   head.innerHTML = `
     <div style="font-size:2rem">${day.emoji}</div>
     <div style="flex:1;min-width:220px">
-      <div class="small muted">Day ${day.day} · ${day.title}</div>
+      <div class="small muted">${UNIT()} ${day.day} · ${day.title}</div>
       <h2 id="taskTitle" style="margin:0"></h2>
       <div class="row wrap" style="gap:8px;margin-top:6px">
         <span class="pill">${KIND_LABEL[task.type]}</span>
@@ -593,6 +760,7 @@ function render() {
   if (task.type === 'lesson') renderLesson(task, pane);
   else if (task.type === 'blanks') renderBlanks(task, pane);
   else if (task.type === 'quiz') renderQuiz(task, pane);
+  else if (task.type === 'mission') renderMission(task, pane);
   else renderCode(task, pane);
 
   logEvent('open', task);
@@ -631,7 +799,10 @@ onRunnerStatus((state, detail) => {
 
 (async function boot() {
   await store.initStore();
-  curriculum = store.getCurriculum();
+  curriculum = store.getCourse(
+    new URLSearchParams(location.search).get('course') || student.course
+  );
+  document.title = `${curriculum.name} — ${student.name}`;
 
   const data = await store.getStudentProgress(student.id);
   if (!data.student) {
@@ -645,7 +816,7 @@ onRunnerStatus((state, detail) => {
 
   if (store.mode === 'demo') {
     $('#helpBtn').classList.add('hidden');
-    document.title = 'Python Camp (demo)';
+    document.title = `${curriculum.name} (demo)`;
   }
   if (helpOn) {
     $('#helpBtn').textContent = '🙋 Help is coming — tap to cancel';

@@ -414,3 +414,63 @@ table.grid tr:last-child td { border-bottom: none; }
   .topbar, .sidebar, button { display: none !important; }
   body { background: #fff; }
 }
+
+/* ------------------------------------------------------------ turtle art */
+
+.turtle-canvas {
+  display: block;
+  width: 100%;
+  border-top: 3px solid var(--line);
+  background: #fff;   /* the turtle's own canvas colour, not the page theme */
+}
+.turtle-canvas.hidden { display: none; }
+
+/* ------------------------------------------------------- mission tiers - */
+
+.tier-picker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.tier-picker .tier {
+  background: var(--bg);
+  color: var(--ink-soft);
+  border: 2px solid var(--line);
+  border-radius: 999px;
+  padding: 7px 15px;
+  font-weight: 700;
+  font-size: 0.92rem;
+  cursor: pointer;
+}
+.tier-picker .tier:hover { border-color: var(--accent); }
+.tier-picker .tier.on {
+  background: var(--bg-2);
+  border-color: var(--accent-2);
+  color: var(--ink);
+}
+
+/* ----------------------------------------------------------- course pick */
+
+.course-picker { display: grid; gap: 10px; }
+.course-opt {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  width: 100%;
+  text-align: left;
+  background: var(--bg);
+  border: 3px solid var(--line);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+.course-opt:hover { border-color: var(--accent); }
+.course-opt.on { background: var(--bg-2); border-color: var(--accent-2); }
+.course-opt .cemoji { font-size: 1.9rem; line-height: 1; }
+.course-opt .cname { font-weight: 800; font-size: 1.05rem; }
+.course-opt .cblurb { color: var(--ink-soft); font-size: 0.9rem; margin: 2px 0 4px; }
+.course-opt .cmeta { color: var(--ink-soft); font-size: 0.8rem; font-weight: 700; }

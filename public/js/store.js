@@ -64,7 +64,7 @@ export async function initStore() {
   }
   mode = 'demo';
   const module = await import('/curriculum/index.js');
-  cachedCurriculum = module.curriculum;
+  cachedCurriculum = { courses: module.courses };
   return mode;
 }
 
@@ -75,6 +75,17 @@ export function getCurriculum() {
   return cachedCurriculum;
 }
 
+/** All courses on offer. */
+export function getCourses() {
+  return getCurriculum().courses;
+}
+
+/** One course by id, falling back to the first if the id is unknown. */
+export function getCourse(id) {
+  const list = getCourses();
+  return list.find((c) => c.id === id) || list[0];
+}
+
 /* --------------------------------------------------------------- students */
 
 export async function listStudents() {
@@ -82,17 +93,26 @@ export async function listStudents() {
   return localData().students;
 }
 
-export async function createStudent(name, avatar) {
+export async function createStudent(name, avatar, course) {
   const clean = String(name || '').trim().slice(0, 24);
   if (!clean) throw new Error('A name is required');
 
-  if (mode === 'server') return api('/api/students', { name: clean, avatar });
+  if (mode === 'server') return api('/api/students', { name: clean, avatar, course });
 
   const data = localData();
   const existing = data.students.find((s) => s.name.toLowerCase() === clean.toLowerCase());
-  if (existing) return existing;
+  if (existing) {
+    if (course && course !== existing.course) {
+      existing.course = course;
+      writeLocal(data);
+    }
+    return existing;
+  }
 
-  const student = { id: data.nextId++, name: clean, avatar: avatar || '🐍', created_at: now() };
+  const student = {
+    id: data.nextId++, name: clean, avatar: avatar || '🐍',
+    course: course || 'level1', created_at: now()
+  };
   data.students.push(student);
   writeLocal(data);
   return student;
@@ -109,15 +129,16 @@ export async function getStudentProgress(studentId) {
   return { student, progress, help: Boolean(data.help[studentId]) };
 }
 
-export async function saveProgress({ studentId, taskKey, day, done, xp, code, attemptDelta }) {
+export async function saveProgress({ studentId, taskKey, course, day, done, xp, code, attemptDelta }) {
   if (mode === 'server')
-    return api('/api/progress', { studentId, taskKey, day, done, xp, code, attemptDelta });
+    return api('/api/progress', { studentId, taskKey, course, day, done, xp, code, attemptDelta });
 
   const data = localData();
   const key = rowKey(studentId, taskKey);
   const prev = data.progress[key] || {
     student_id: Number(studentId),
     task_key: taskKey,
+    course: course || 'camp',
     day: Number(day),
     done: 0,
     attempts: 0,

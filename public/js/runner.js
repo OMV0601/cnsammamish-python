@@ -33,7 +33,7 @@ function spawnWorker() {
       if (entry) {
         clearTimeout(entry.timer);
         pending.delete(msg.id);
-        entry.resolve({ stdout: msg.stdout, error: msg.error });
+        entry.resolve({ stdout: msg.stdout, error: msg.error, turtle: msg.turtle || null });
       }
     }
   };
@@ -75,7 +75,8 @@ export function runPython(code, stdin = []) {
     return Promise.resolve({
       stdout: '',
       error: 'Python is still loading — give it a few seconds and press Run again.',
-      timedOut: false
+      timedOut: false,
+      turtle: null
     });
   }
 
@@ -87,6 +88,7 @@ export function runPython(code, stdin = []) {
       resolve({
         stdout: '',
         timedOut: true,
+        turtle: null,
         error:
           'Your program ran for 10 seconds without finishing, so it was stopped.\n' +
           'That almost always means a loop that never ends. Check that something ' +
@@ -200,9 +202,47 @@ export async function checkTask(task, code) {
     }
 
     const out = normalise(result.stdout);
+    const draw = result.turtle;
+    const segments = draw ? draw.ops.filter((o) => o.op === 'line') : [];
+    const penColours = new Set(segments.map((o) => o.color));
+
+    // Which way each stroke points. Four segments in a straight line share one
+    // direction; a square has four. This is what separates a real shape from a
+    // loop whose turn was left outside it.
+    const directions = new Set(
+      segments.map((o) => {
+        const deg = Math.round((Math.atan2(o.y2 - o.y1, o.x2 - o.x1) * 180) / Math.PI);
+        return ((deg % 360) + 360) % 360;
+      })
+    );
+
+    // Did the pen finish where it started? True for any closed shape.
+    let closed = false;
+    if (segments.length) {
+      const first = segments[0];
+      const last = segments[segments.length - 1];
+      const span = Math.max(
+        ...segments.map((o) => Math.hypot(o.x2 - o.x1, o.y2 - o.y1)), 1
+      );
+      closed = Math.hypot(last.x2 - first.x1, last.y2 - first.y1) <= span * 0.25;
+    }
+
     for (const check of group.checks) {
       let ok = true;
-      if (check.mode === 'exact') ok = out === normalise(check.expect);
+      if (check.mode === 'turtle') {
+        // Turtle tasks draw instead of printing, so they are judged on what
+        // ended up on the canvas rather than on stdout.
+        if (!draw) {
+          ok = false;
+        } else {
+          ok =
+            segments.length >= (check.minSegments || 1) &&
+            penColours.size >= (check.minColours || 1) &&
+            directions.size >= (check.minDirections || 1) &&
+            (!check.closed || closed) &&
+            (!check.minDots || draw.ops.filter((o) => o.op === 'dot').length >= check.minDots);
+        }
+      } else if (check.mode === 'exact') ok = out === normalise(check.expect);
       else if (check.mode === 'contains') ok = out.includes(normalise(check.expect));
       else if (check.mode === 'notcontains') ok = !out.includes(normalise(check.expect));
       else if (check.mode === 'minlines') ok = countLines(result.stdout) >= Number(check.expect);

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Python Camp</title>
+<title>Python Club</title>
 <link rel="stylesheet" href="/css/style.css">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐍</text></svg>">
 </head>
@@ -13,8 +13,8 @@
 
   <div class="center">
     <div class="logo">🐍</div>
-    <h1>Python Camp</h1>
-    <p class="muted">Five days. Five levels. One brand new superpower.</p>
+    <h1>Python Club</h1>
+    <p class="muted">Write real code. Break it. Fix it. Show someone.</p>
   </div>
 
   <div class="card" style="margin-top:26px">
@@ -25,8 +25,12 @@
   </div>
 
   <div class="card" style="margin-top:18px">
-    <h2>New here? Join the camp</h2>
-    <p class="small muted">Pick a character:</p>
+    <h2>New here? Join in</h2>
+
+    <p class="small muted">Which course are you doing?</p>
+    <div id="courses" class="course-picker"></div>
+
+    <p class="small muted" style="margin-top:16px">Pick a character:</p>
     <div id="avatars" class="avatar-picker"></div>
     <div class="row wrap">
       <input type="text" id="name" placeholder="Your first name" maxlength="24" autocomplete="off">
@@ -47,16 +51,48 @@ import * as store from '/js/store.js';
 
 await store.initStore();
 
+const courses = store.getCourses();
+let chosenCourse = courses[0].id;
+
 if (store.mode === 'demo') {
   const note = document.createElement('div');
   note.className = 'callout warn';
   note.style.margin = '20px 0 0';
-  note.innerHTML = "<b>This is the online demo.</b> Everything works — all five days, the quizzes, " +
-    "and real Python running in your browser — but your progress is saved <b>only in this browser</b> " +
-    "on this device. The real camp runs on the instructor's laptop, where progress is shared and saved properly.";
+  note.innerHTML = "<b>This is the online demo.</b> Everything works — every lesson, quiz, bug hunt " +
+    "and turtle drawing, with real Python running in your browser — but your progress is saved " +
+    "<b>only in this browser</b> on this device. The real club runs on the instructor's laptop, " +
+    "where progress is shared and saved properly.";
   document.querySelector('.welcome-wrap > .center').after(note);
   document.getElementById('teacherLine').classList.add('hidden');
 }
+
+/* ------------------------------------------------------------- courses -- */
+
+const courseBox = document.getElementById('courses');
+function paintCourses() {
+  courseBox.innerHTML = '';
+  for (const course of courses) {
+    const hours = Math.round(course.totalMinutes / 60);
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = 'course-opt' + (course.id === chosenCourse ? ' on' : '');
+    card.innerHTML = `
+      <div class="cemoji">${course.emoji}</div>
+      <div class="cbody">
+        <div class="cname"></div>
+        <div class="cblurb"></div>
+        <div class="cmeta">${course.days.length} ${course.unitWord.toLowerCase()}s ·
+          ${course.ages} · about ${hours}h of material</div>
+      </div>`;
+    card.querySelector('.cname').textContent = course.name;
+    card.querySelector('.cblurb').textContent = course.blurb;
+    card.onclick = () => { chosenCourse = course.id; paintCourses(); };
+    courseBox.appendChild(card);
+  }
+}
+paintCourses();
+
+/* ------------------------------------------------------------- avatars -- */
 
 const AVATARS = ['🐍','🦊','🐼','🐸','🦄','🐙','🦖','🐧','🐢','🦉','🐝','🦁','🐳','🐨','👾','🚀'];
 let chosen = AVATARS[0];
@@ -75,16 +111,22 @@ AVATARS.forEach((emoji, i) => {
   avatarBox.appendChild(b);
 });
 
+/* ------------------------------------------------------------ students -- */
+
 async function loadStudents() {
   const list = await store.listStudents();
   const box = document.getElementById('students');
   box.innerHTML = '';
   document.getElementById('nobody').classList.toggle('hidden', list.length > 0);
   for (const s of list) {
+    const course = store.getCourse(s.course);
     const chip = document.createElement('div');
     chip.className = 'student-chip';
-    chip.innerHTML = `<div class="face">${s.avatar}</div><div class="who"></div>`;
+    chip.innerHTML = `<div class="face">${s.avatar}</div>
+      <div class="who"></div>
+      <div class="small muted">${course.emoji} ${course.name}</div>`;
     chip.querySelector('.who').textContent = s.name;
+    // Returning students go straight back to the course they are enrolled on.
     chip.onclick = () => enter(s);
     box.appendChild(chip);
   }
@@ -108,7 +150,7 @@ async function join() {
     return;
   }
   try {
-    enter(await store.createStudent(name, chosen));
+    enter(await store.createStudent(name, chosen, chosenCourse));
   } catch (err) {
     errBox.textContent = err.message || 'Something went wrong.';
     errBox.classList.remove('hidden');

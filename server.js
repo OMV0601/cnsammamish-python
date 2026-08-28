@@ -12,7 +12,7 @@ import { networkInterfaces } from 'node:os';
 
 import * as store from './db.js';
 // Lives under public/ so the static demo build can import it in the browser too.
-import { curriculum } from './public/curriculum/index.js';
+import { courses } from './public/curriculum/index.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const PUBLIC = join(here, 'public');
@@ -104,7 +104,7 @@ const server = createServer(async (req, res) => {
 
     /* ------------------------------------------------------------- GET api */
     if (req.method === 'GET') {
-      if (path === '/api/curriculum') return json(res, 200, curriculum);
+      if (path === '/api/curriculum') return json(res, 200, { courses });
       if (path === '/api/students') return json(res, 200, store.listStudents());
 
       let m = path.match(/^\/api\/students\/(\d+)\/progress$/);
@@ -132,7 +132,7 @@ const server = createServer(async (req, res) => {
 
       if (path === '/api/students') {
         try {
-          return json(res, 200, store.createStudent(body.name, body.avatar));
+          return json(res, 200, store.createStudent(body.name, body.avatar, body.course));
         } catch (err) {
           return json(res, 400, { error: err.message });
         }
