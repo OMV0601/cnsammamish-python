@@ -563,7 +563,14 @@ function renderCode(task, pane) {
       const parts = [];
       if (shown.stdout) parts.push(escapeHtml(shown.stdout.replace(/\n$/, '')));
       if (shown.error) parts.push(`<span class="err">${escapeHtml(friendlyError(shown.error))}</span>`);
-      ed.out.innerHTML = parts.join('\n') || '<span class="sys">(nothing was printed)</span>';
+      ed.out.innerHTML =
+        parts.join('\n') ||
+        (shown.turtle
+          ? '<span class="sys">(your drawing is below)</span>'
+          : '<span class="sys">(nothing was printed)</span>');
+      // Turtle tasks print nothing, so without this the drawing that was just
+      // judged would never appear for anyone who presses Check before Run.
+      if (ed.canvas) drawTurtle(ed.canvas, shown.turtle);
     }
 
     verdict.innerHTML = '';
