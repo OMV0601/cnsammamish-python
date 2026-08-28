@@ -1,2 +1,0 @@
-static-demo build marker — used to confirm which commit Vercel has live
-build: 3

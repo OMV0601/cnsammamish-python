@@ -263,7 +263,7 @@ export default {
         'Borders are just strings of repeated symbols, e.g. print("-----------")'
       ],
       requires: [
-        { text: '#', message: 'Add at least one comment starting with #.' },
+        { text: '#', raw: true, message: 'Add at least one comment starting with #.' },
         { text: 'print', message: 'Use print to draw your card.' }
       ],
       checks: [{ mode: 'minlines', expect: 5, message: 'A card needs at least 5 lines of output.' }]

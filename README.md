@@ -1,6 +1,15 @@
-# 🐍 Python Camp
+# 🐍 Python Club
 
-A gamified, self-paced Python course for ~8 kids aged 10, built for a **5-session camp, 2 hours per session**. Kids read short lessons, fill in blanks, take quizzes, and write **real Python that runs in the browser**. Everything they do is saved to a database, and you get a live dashboard showing where all 8 of them are.
+Gamified, self-paced Python for Code Ninjas Sammamish. Kids read short lessons,
+fill in blanks, take quizzes, hunt planted bugs, and write **real Python that
+runs in the browser** — including Turtle drawings. Everything they do is saved
+to a database, and you get a live dashboard showing where the whole room is.
+
+Two courses ship in the app:
+
+- **Python Level 1** — 12 weekly 2-hour sessions, ages 8+, the full instructor
+  curriculum including Turtle graphics and a final project.
+- **5-Day Python Camp** — five consecutive 2-hour days, ages 9-12.
 
 No installs on the kids' machines. No accounts. No internet needed for the app itself.
 
@@ -73,7 +82,7 @@ Python execution is client-side (Pyodide), so it is identical in both modes.
 ## What the kids see
 
 1. **Pick a character and type their first name** — that's the whole login.
-2. A **map of 5 days**. Day 1 is open; each next day unlocks at 60% of the previous one (they can push past it with a warning if you tell them to).
+2. A **map of the course** — 12 weeks or 5 days. The first is open; each next one unlocks at 60% of the previous (they can push past it with a warning if you tell them to).
 3. Inside a day, a numbered list of tasks that always runs in the same rhythm:
 
    **Learn → Fill the blanks → Quiz → Code it → Mini project**
@@ -97,7 +106,59 @@ The dashboard refreshes itself every 6 seconds. Leave it open on your laptop or 
 
 ---
 
-## The 5 days
+## Two courses
+
+A student picks a course when they join, and progress is recorded against it.
+Task keys never collide, so the same child can work through both.
+
+### Python Level 1 — 12 weeks, ages 8+
+
+The Code Ninjas Sammamish instructor curriculum: one 2-hour session per week.
+Every week is five tasks — **Learn → Fill the blanks → Quiz → Bug hunt →
+Mission** — about 80 minutes of screen work, leaving the rest of the session for
+the hook, building together, the break and sharing.
+
+| Week | Project | New idea |
+|-----:|---------|----------|
+| 1 | My First Silly Story | `print`, variables, `input`, f-strings |
+| 2 | Player Power Card | words vs whole numbers, `int()`, maths |
+| 3 | Choose-a-Path Story | `if` / `else` |
+| 4 | Mystery Door Challenge | random numbers |
+| 5 | Turtle Shape Maker | `for` loops |
+| 6 | Turtle Spiral Studio | a value that changes each pass |
+| 7 | Number Guessing Game | `while` loops |
+| 8 | Game Backpack | lists and `append` |
+| 9 | Turtle Stamp Studio | functions |
+| 10 | Mini Adventure Builder | reading and finishing a starter file |
+| 11 | Final Project: Choose Your Path | three projects to pick from |
+| 12 | Test, Improve & Share | testing, fixing, explaining |
+
+Two task types come straight from the instructor notes:
+
+- **Bug hunt** — a program with exactly one planted fault, and three hints that
+  get more specific. Every fault is the one the curriculum names for that week.
+- **Mission** — a **Main Mission** and a **Simpler Version**. Either counts as
+  finished, as the curriculum intends; the **Extra Challenge** appears once the
+  mission passes. Week 11 instead offers three equal project paths.
+
+### Turtle graphics
+
+Weeks 5, 6 and 9 use Turtle. Pyodide has no Tk, so the real `turtle` module
+cannot run in a browser. [public/js/pyworker.js](public/js/pyworker.js) defines a
+stand-in that does the geometry in Python and records what was drawn; the page
+paints those records onto a canvas.
+
+Kids write ordinary turtle code — `forward`, `right`, `pencolor`, `pensize`,
+`penup`/`pendown`, `begin_fill`, `circle`, `Screen().bgcolor()`, both the module
+and `Turtle()` styles — and see ordinary turtle drawings. Turtle tasks are marked
+by inspecting the drawing itself: how many strokes, how many distinct directions,
+whether the shape closed, whether stroke lengths vary. (Counting strokes alone is
+not enough — four strokes in a straight line is exactly the Week 5 bug.)
+
+---
+
+## The 5-Day Camp (ages 9-12)
+
 
 | Day | Title | Covers | Mini project |
 |-----|-------|--------|--------------|

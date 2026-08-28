@@ -168,11 +168,40 @@ function countLines(text) {
  * Runs every check for a task.
  * Returns { passed, failures: [message], runs: [{stdin, stdout, error}] }
  */
+/* Removes # comments so a `requires` rule cannot be satisfied by the starter's
+   own scaffolding — "# while the guess is wrong:" is not a while loop. Quotes
+   are respected so a # inside a string survives. Triple-quoted strings are not
+   handled; Level 1 never uses them. */
+function stripComments(code) {
+  let out = '';
+  let quote = null;
+  for (let i = 0; i < code.length; i++) {
+    const ch = code[i];
+    if (quote) {
+      out += ch;
+      if (ch === '\\') { out += code[i + 1] || ''; i++; continue; }
+      if (ch === quote) quote = null;
+    } else if (ch === '"' || ch === "'") {
+      quote = ch;
+      out += ch;
+    } else if (ch === '#') {
+      while (i < code.length && code[i] !== '\n') i++;
+      out += '\n';
+    } else {
+      out += ch;
+    }
+  }
+  return out;
+}
+
 export async function checkTask(task, code) {
   const failures = [];
 
+  const codeOnly = stripComments(code);
   for (const rule of task.requires || []) {
-    if (!code.includes(rule.text)) failures.push(rule.message);
+    // rule.raw is for rules about comments themselves, e.g. "write a comment".
+    const haystack = rule.raw ? code : codeOnly;
+    if (!haystack.includes(rule.text)) failures.push(rule.message);
   }
 
   const checks = task.checks || [];
@@ -216,6 +245,12 @@ export async function checkTask(task, code) {
       })
     );
 
+    // How many different stroke lengths. A polygon has one; a spiral, where
+    // the distance grows each time round, has many.
+    const strokeLengths = new Set(
+      segments.map((o) => Math.round(Math.hypot(o.x2 - o.x1, o.y2 - o.y1)))
+    );
+
     // Did the pen finish where it started? True for any closed shape.
     let closed = false;
     if (segments.length) {
@@ -239,6 +274,7 @@ export async function checkTask(task, code) {
             segments.length >= (check.minSegments || 1) &&
             penColours.size >= (check.minColours || 1) &&
             directions.size >= (check.minDirections || 1) &&
+            strokeLengths.size >= (check.minLengths || 1) &&
             (!check.closed || closed) &&
             (!check.minDots || draw.ops.filter((o) => o.op === 'dot').length >= check.minDots);
         }

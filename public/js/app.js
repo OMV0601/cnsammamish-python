@@ -619,10 +619,24 @@ function renderCode(task, pane) {
    Version that teaches the same skill with less to build. Either one counts
    as done — the curriculum treats the Simpler Version as a real finish, not
    as a failure. The Extra Challenge appears once the mission passes. */
+function missionTiers(task) {
+  // Most weeks offer Main + Simpler. Week 11 instead offers a choice of three
+  // equal projects, so a mission may supply `paths` rather than main/simpler.
+  if (task.paths) {
+    return task.paths.map((p) => ({ id: p.id, label: p.label, spec: p, equal: true }));
+  }
+  const tiers = [{ id: 'main', label: '🎯 Main Mission', spec: task.main }];
+  if (task.simpler) {
+    tiers.push({ id: 'simpler', label: '🌱 ' + (task.simpler.label || 'Simpler Version'), spec: task.simpler });
+  }
+  return tiers;
+}
+
 function renderMission(task, pane) {
   const tierKey = 'camp.tier.' + task.key;
-  let tier = localStorage.getItem(tierKey) || 'main';
-  if (tier === 'simpler' && !task.simpler) tier = 'main';
+  const tiers = missionTiers(task);
+  let tier = localStorage.getItem(tierKey) || tiers[0].id;
+  if (!tiers.some((t) => t.id === tier)) tier = tiers[0].id;
 
   const picker = el('div', 'tier-picker');
   const body = el('div');
@@ -630,9 +644,7 @@ function renderMission(task, pane) {
 
   function paint() {
     picker.innerHTML = '';
-    const options = [{ id: 'main', label: '🎯 Main Mission' }];
-    if (task.simpler) options.push({ id: 'simpler', label: '🌱 ' + (task.simpler.label || 'Simpler Version') });
-    for (const opt of options) {
+    for (const opt of tiers) {
       const b = el('button', 'tier' + (opt.id === tier ? ' on' : ''), opt.label);
       b.onclick = () => {
         if (tier === opt.id) return;
@@ -643,24 +655,28 @@ function renderMission(task, pane) {
       };
       picker.appendChild(b);
     }
-    if (task.simpler) {
+
+    const current = tiers.find((t) => t.id === tier);
+    if (tiers.length > 1) {
       picker.appendChild(el('span', 'small muted',
-        tier === 'main'
-          ? 'Stuck? The Simpler Version still counts as finished.'
-          : 'This counts as finished. Try the Main Mission any time.'));
+        current.equal
+          ? 'Pick whichever appeals — they are all worth the same.'
+          : tier === 'main'
+            ? 'Stuck? The Simpler Version still counts as finished.'
+            : 'This counts as finished. Try the Main Mission any time.'));
     }
 
     // Flatten the chosen tier onto the task so renderCode sees a normal task.
-    const spec = tier === 'simpler' ? task.simpler : task.main;
+    const onMain = tier === 'main' || current.equal;
     const effective = {
       ...task,
-      ...spec,
+      ...current.spec,
       type: 'mission',
       key: task.key,
       xp: task.xp,
       title: task.title,
-      extra: tier === 'main' ? task.extra : null,
-      quickCheck: tier === 'main' ? task.quickCheck : null
+      extra: onMain ? current.spec.extra || task.extra : null,
+      quickCheck: onMain ? task.quickCheck : null
     };
     body.innerHTML = '';
     renderCode(effective, body);

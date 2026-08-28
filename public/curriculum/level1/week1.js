@@ -238,6 +238,12 @@ export default {
         ],
         requires: [{ text: 'f"', message: 'The sentence should be an f-string — it starts with f".' }],
         checks: [
+          // The two questions echo the answers, so `contains` alone would pass
+          // an empty sentence. minlines forces a third, written line.
+          {
+            mode: 'minlines', expect: 3,
+            message: 'Your sentence is still empty — write it inside the quote marks.'
+          },
           { mode: 'contains', expect: 'Ada', message: 'The name is not appearing in your sentence yet.' },
           { mode: 'contains', expect: 'jungle', message: 'The place is not appearing in your sentence yet.' }
         ]
